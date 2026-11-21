@@ -36,7 +36,10 @@ export const createApp = (): Application => {
   app.use(express.urlencoded({ extended: true }));
 
   // Health check endpoint
-  const healthHandler = (req: Request, res: Response) => {
+  const healthHandler = async (req: Request, res: Response) => {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
     const isDbConnected = mongoose.connection.readyState === 1;
     res.status(isDbConnected ? 200 : 503).json({
       status: isDbConnected ? 'success' : 'database_disconnected',
@@ -44,6 +47,8 @@ export const createApp = (): Application => {
         ? 'WedPlan API Server is running smoothly'
         : 'Server is running but MongoDB is not connected. Please verify MONGODB_URI in Vercel and whitelist 0.0.0.0/0 in MongoDB Atlas Network Access.',
       databaseReadyState: mongoose.connection.readyState,
+      dbError: isDbConnected ? null : require('./config/db').lastDbError,
+      hasEnvUri: Boolean(process.env.MONGODB_URI),
       timestamp: new Date().toISOString()
     });
   };
@@ -54,15 +59,13 @@ export const createApp = (): Application => {
 
   // Database auto-reconnect middleware for serverless invocations
   app.use(async (req: Request, res: Response, next: NextFunction) => {
-    if (req.path === '/api/health' || req.path === '/health' || req.path === '/') {
-      return next();
-    }
     if (mongoose.connection.readyState !== 1) {
       const ok = await connectDB();
       if (!ok) {
         res.status(503).json({
           success: false,
-          message: 'Database connection is not ready. Please verify MONGODB_URI is set in Vercel Project Settings and MongoDB Atlas Network Access allows 0.0.0.0/0.'
+          message: 'Database connection is not ready. Please verify MONGODB_URI is set in Vercel Project Settings and MongoDB Atlas Network Access allows 0.0.0.0/0.',
+          error: require('./config/db').lastDbError
         });
         return;
       }
