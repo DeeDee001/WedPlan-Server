@@ -34,16 +34,21 @@ export const createApp = (): Application => {
   app.use(express.urlencoded({ extended: true }));
 
   // Health check endpoint
-  app.get('/api/health', (req: Request, res: Response) => {
+  const healthHandler = (req: Request, res: Response) => {
     res.status(200).json({
       status: 'success',
       message: 'WedPlan API Server is running smoothly',
       timestamp: new Date().toISOString()
     });
-  });
+  };
 
-  // Mount API routes
+  app.get('/api/health', healthHandler);
+  app.get('/health', healthHandler);
+  app.get('/', healthHandler);
+
+  // Mount API routes for both prefixed and direct paths on Vercel
   app.use('/api', apiRoutes);
+  app.use('/', apiRoutes);
 
   // 404 Handler
   app.use(notFoundHandler);
