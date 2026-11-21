@@ -17,7 +17,8 @@ export const connectDB = async (): Promise<boolean> => {
   if (mongoose.connection.readyState === 2) {
     try {
       await mongoose.connection.asPromise();
-      isConnected = mongoose.connection.readyState === 1;
+      const state = mongoose.connection.readyState as number;
+      isConnected = state === 1;
       return isConnected;
     } catch (e: any) {
       lastDbError = e?.message || 'Error waiting for MongoDB connection';
