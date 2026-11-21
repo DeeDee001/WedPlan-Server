@@ -14,6 +14,17 @@ export const connectDB = async (): Promise<boolean> => {
     return true;
   }
 
+  if (mongoose.connection.readyState === 2) {
+    try {
+      await mongoose.connection.asPromise();
+      isConnected = mongoose.connection.readyState === 1;
+      return isConnected;
+    } catch (e: any) {
+      lastDbError = e?.message || 'Error waiting for MongoDB connection';
+      return false;
+    }
+  }
+
   const uri = process.env.MONGODB_URI || ENV.MONGODB_URI;
 
   if (!uri || uri.includes('127.0.0.1') || uri.includes('localhost')) {
