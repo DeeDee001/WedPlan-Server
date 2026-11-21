@@ -1,7 +1,10 @@
-import express, { Application, Request, Response, NextFunction } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import { ENV } from './config/env';
+import apiRoutes from './routes';
+import { handleWebhook } from './controllers/payment.controller';
+import { notFoundHandler, errorHandler } from './middlewares/error.middleware';
 
 export const createApp = (): Application => {
   const app = express();
@@ -23,9 +26,8 @@ export const createApp = (): Application => {
 
   app.use(morgan('dev'));
 
-  // Stripe webhook route needs raw body for signature verification
-  // Mounted before express.json()
-  app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+  // Stripe webhook route needs raw body for signature verification before JSON parsing
+  app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 
   // Regular JSON & urlencoded parser for other routes
   app.use(express.json());
@@ -39,6 +41,15 @@ export const createApp = (): Application => {
       timestamp: new Date().toISOString()
     });
   });
+
+  // Mount API routes
+  app.use('/api', apiRoutes);
+
+  // 404 Handler
+  app.use(notFoundHandler);
+
+  // Global Error Handler
+  app.use(errorHandler);
 
   return app;
 };
