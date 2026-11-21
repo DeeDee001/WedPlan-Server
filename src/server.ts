@@ -1,9 +1,11 @@
 import { createApp } from './app';
 import { connectDB } from './config/db';
 import { ENV } from './config/env';
+import { seedAdmin } from './utils/seedAdmin';
 
 const startServer = async () => {
   await connectDB();
+  await seedAdmin();
 
   const app = createApp();
 
