@@ -1,7 +1,9 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import cors from 'cors';
 import morgan from 'morgan';
 import { ENV } from './config/env';
+import { connectDB } from './config/db';
 import apiRoutes from './routes';
 import { handleWebhook } from './controllers/payment.controller';
 import { notFoundHandler, errorHandler } from './middlewares/error.middleware';
@@ -35,9 +37,13 @@ export const createApp = (): Application => {
 
   // Health check endpoint
   const healthHandler = (req: Request, res: Response) => {
-    res.status(200).json({
-      status: 'success',
-      message: 'WedPlan API Server is running smoothly',
+    const isDbConnected = mongoose.connection.readyState === 1;
+    res.status(isDbConnected ? 200 : 503).json({
+      status: isDbConnected ? 'success' : 'database_disconnected',
+      message: isDbConnected
+        ? 'WedPlan API Server is running smoothly'
+        : 'Server is running but MongoDB is not connected. Please verify MONGODB_URI in Vercel and whitelist 0.0.0.0/0 in MongoDB Atlas Network Access.',
+      databaseReadyState: mongoose.connection.readyState,
       timestamp: new Date().toISOString()
     });
   };
@@ -45,6 +51,24 @@ export const createApp = (): Application => {
   app.get('/api/health', healthHandler);
   app.get('/health', healthHandler);
   app.get('/', healthHandler);
+
+  // Database auto-reconnect middleware for serverless invocations
+  app.use(async (req: Request, res: Response, next: NextFunction) => {
+    if (req.path === '/api/health' || req.path === '/health' || req.path === '/') {
+      return next();
+    }
+    if (mongoose.connection.readyState !== 1) {
+      const ok = await connectDB();
+      if (!ok) {
+        res.status(503).json({
+          success: false,
+          message: 'Database connection is not ready. Please verify MONGODB_URI is set in Vercel Project Settings and MongoDB Atlas Network Access allows 0.0.0.0/0.'
+        });
+        return;
+      }
+    }
+    next();
+  });
 
   // Mount API routes for both prefixed and direct paths on Vercel
   app.use('/api', apiRoutes);
