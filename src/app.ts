@@ -55,6 +55,7 @@ export const createApp = (): Application => {
 
   app.get('/api/health', healthHandler);
   app.get('/health', healthHandler);
+  app.get('/api', healthHandler);
   app.get('/', healthHandler);
 
   // Database auto-reconnect middleware for serverless invocations
