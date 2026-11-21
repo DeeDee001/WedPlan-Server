@@ -3,14 +3,21 @@ import { connectDB } from '../src/config/db';
 import { seedAdmin } from '../src/utils/seedAdmin';
 
 const app = createApp();
+
 let isInitialized = false;
 
-export default async function handler(req: any, res: any) {
+// Middleware to ensure DB connection before handling request in serverless
+app.use(async (req, res, next) => {
   if (!isInitialized) {
-    await connectDB();
-    await seedAdmin();
-    isInitialized = true;
+    try {
+      await connectDB();
+      seedAdmin().catch(console.error); // Asynchronous non-blocking seed
+      isInitialized = true;
+    } catch (err) {
+      console.error('Serverless DB initialization error:', err);
+    }
   }
-  return app(req, res);
-}
+  next();
+});
 
+export default app;
