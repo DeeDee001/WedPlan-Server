@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import { Booking } from '../models/booking.model';
 import { Service } from '../models/service.model';
 import { AuthRequest } from '../middlewares/auth.middleware';
@@ -25,6 +26,11 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
         success: false,
         message: 'Service ID, event date, and event location are required.'
       });
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(serviceId)) {
+      res.status(404).json({ success: false, message: 'Invalid service ID.' });
       return;
     }
 
@@ -121,6 +127,11 @@ export const cancelBooking = async (req: AuthRequest, res: Response): Promise<vo
     const { id } = req.params;
     const customerId = req.user!.id;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(404).json({ success: false, message: 'Invalid booking ID.' });
+      return;
+    }
+
     const booking = await Booking.findById(id);
     if (!booking) {
       res.status(404).json({ success: false, message: 'Booking not found.' });
@@ -191,6 +202,11 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
         success: false,
         message: 'Status must be either "accepted" or "rejected".'
       });
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(404).json({ success: false, message: 'Invalid booking ID.' });
       return;
     }
 

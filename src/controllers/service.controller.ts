@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import { Service, ServiceStatus } from '../models/service.model';
 import { User } from '../models/user.model';
 import { AuthRequest } from '../middlewares/auth.middleware';
@@ -104,6 +105,11 @@ export const updateService = async (req: AuthRequest, res: Response): Promise<vo
     const vendorId = req.user!.id;
     const { serviceName, category, description, price, location, images, image, status } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(404).json({ success: false, message: 'Invalid service ID.' });
+      return;
+    }
+
     const service = await Service.findById(id);
     if (!service) {
       res.status(404).json({ success: false, message: 'Service not found.' });
@@ -153,6 +159,11 @@ export const deleteService = async (req: AuthRequest, res: Response): Promise<vo
     const { id } = req.params;
     const userId = req.user!.id;
     const userRole = req.user!.role;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(404).json({ success: false, message: 'Invalid service ID.' });
+      return;
+    }
 
     const service = await Service.findById(id);
     if (!service) {
@@ -265,6 +276,11 @@ export const getFeaturedServices = async (req: any, res: Response): Promise<void
 export const getServiceById = async (req: any, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(404).json({ success: false, message: 'Service not found with the provided ID.' });
+      return;
+    }
 
     const service = await Service.findById(id).populate(
       'vendorId',
