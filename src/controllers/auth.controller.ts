@@ -157,7 +157,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
       try {
         const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${tokenToVerify}`);
         if (googleRes.ok) {
-          const payload = await googleRes.json();
+          const payload = (await googleRes.json()) as any;
           userEmail = payload.email;
           userName = payload.name || userName;
           userImage = payload.picture || userImage;
