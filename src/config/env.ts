@@ -12,5 +12,7 @@ export const ENV = {
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || '',
   IMGBB_API_KEY: process.env.IMGBB_API_KEY || '',
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@wedplan.com',
-  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'Admin123!'
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'Admin123!',
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || ''
 };
