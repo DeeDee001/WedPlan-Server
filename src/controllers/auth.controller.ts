@@ -145,29 +145,53 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const googleAuth = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, name, image, role } = req.body;
+    const { credential, idToken, email, name, image, role, businessName } = req.body;
 
-    if (!email) {
-      res.status(400).json({ success: false, message: 'Email is required for Google Sign-in.' });
+    let userEmail = email;
+    let userName = name;
+    let userImage = image;
+
+    // Verify Google ID Token directly with Google's tokeninfo API if credential is provided
+    const tokenToVerify = credential || idToken;
+    if (tokenToVerify) {
+      try {
+        const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${tokenToVerify}`);
+        if (googleRes.ok) {
+          const payload = await googleRes.json();
+          userEmail = payload.email;
+          userName = payload.name || userName;
+          userImage = payload.picture || userImage;
+        } else {
+          console.warn('Google token verification returned status:', googleRes.status);
+        }
+      } catch (verifyErr) {
+        console.error('Failed to contact Google tokeninfo API:', verifyErr);
+      }
+    }
+
+    if (!userEmail) {
+      res.status(400).json({ success: false, message: 'Valid Google email is required for Google Sign-in.' });
       return;
     }
 
-    let user = await User.findOne({ email: email.toLowerCase() });
+    let user = await User.findOne({ email: userEmail.toLowerCase() });
 
     if (!user) {
+      // Prevent creating admin accounts through Google OAuth
       const assignedRole = role === 'vendor' ? 'vendor' : 'customer';
       user = await User.create({
-        name: name || 'Google User',
-        email: email.toLowerCase(),
-        image: image || '',
+        name: userName || 'Google User',
+        email: userEmail.toLowerCase(),
+        image: userImage || '',
         role: assignedRole,
+        businessName: assignedRole === 'vendor' ? businessName || '' : '',
         isBlocked: false,
         subscriptionPlan: 'free'
       });
     }
 
     if (user.isBlocked) {
-      res.status(403).json({ success: false, message: 'Your account has been suspended.' });
+      res.status(403).json({ success: false, message: 'Your account has been suspended by an administrator.' });
       return;
     }
 
@@ -181,7 +205,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
 
     res.status(200).json({
       success: true,
-      message: 'Google Sign-in successful.',
+      message: 'Signed in with Google successfully.',
       token,
       user: {
         id: user._id,
